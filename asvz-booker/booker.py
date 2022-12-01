@@ -4,7 +4,9 @@ from helpers import repeat_dates, unix_to_str
 from scraper import AsvzScraper
 from enroller import enroll
 
+# TODO: Test with fitness
 # TODO: Add docstrings
+
 
 def main():
     num_weeks = 3
@@ -27,7 +29,10 @@ def main():
         # Note: lessons_df is sorted by online enrollment time, so
         # the next enrollment time is just the first row in the df.
         # (We assume no clashes in enrollment times).
-        next_sport = lessons_df.iloc[0]
+        lessons_df.reset_index(inplace=True, drop=True)
+        lessons_df_t = lessons_df.T
+        next_sport = lessons_df_t.pop(0)  # Pop the first row
+        lessons_df = lessons_df_t.T
         next_sport["oe_from_date_stamp"]
         next_oe_from_date = datetime.datetime.fromtimestamp(next_sport["oe_from_date_stamp"])
         # Ignore dates where we have missed the enrollment time
@@ -43,9 +48,6 @@ def main():
             print("")
             enrollment_time = next_sport["oe_from_date_stamp"]
             enroll(lesson_url=next_sport["url"], enrollment_time=enrollment_time, lesson_name=next_sport["sport_name"])
-
-        lessons_df = lessons_df[1:]  # Remove the first row from the df
-        lessons_df.reset_index(inplace=True, drop=True)
 
 
 if __name__ == "__main__":
