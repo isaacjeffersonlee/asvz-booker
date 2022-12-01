@@ -4,6 +4,7 @@ import datetime
 from typing import Union
 from asvz_details import asvz_id, asvz_password
 
+# TODO: When migrating to amazon EC2 Server (change client id and others accordingly)
 
 def get_bearer(s: requests.Session):
     url = "https://auth.asvz.ch/connect/authorize"
