@@ -1,0 +1,5 @@
+selenium/
+*.log
+__pycache__
+.pyvenv
+asvz_details.py
