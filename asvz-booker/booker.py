@@ -30,6 +30,8 @@ def main():
         # the next enrollment time is just the first row in the df.
         # (We assume no clashes in enrollment times).
         lessons_df.reset_index(inplace=True, drop=True)
+        # We want to pop the first row, but pandas can only pop
+        # columns, so we transpose, then pop, then transpose back.
         lessons_df_t = lessons_df.T
         next_sport = lessons_df_t.pop(0)  # Pop the first row
         lessons_df = lessons_df_t.T
