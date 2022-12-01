@@ -3,3 +3,4 @@ selenium/
 __pycache__
 .pyvenv
 asvz_details.py
+*.pkl
