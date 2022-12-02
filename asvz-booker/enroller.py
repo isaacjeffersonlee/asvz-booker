@@ -1,12 +1,31 @@
 import requests
 import time
 import datetime
-from typing import Union
+from typing import Union, Optional
 from asvz_details import asvz_id, asvz_password
 
 # TODO: When migrating to amazon EC2 Server (change client id and others accordingly)
 
-def get_bearer(s: requests.Session):
+
+def get_bearer(s: requests.Session) -> str:
+    """
+    Get the bearer token str.
+
+    This is required for sending any requests where
+    the user would normally have to login.
+
+    Parameters
+    ----------
+    s : requests.Session
+        The requests session to use to send requests with.
+        Note: the user needs to have already sent a login request
+        so that the sessions cookies get populated.
+
+    Returns
+    -------
+    str
+        The bearer token to be used in other requests.
+    """
     url = "https://auth.asvz.ch/connect/authorize"
     querystring = {
         "client_id": "55776bff-ef75-4c9d-9bdd-45e883ec38e0",
@@ -52,6 +71,28 @@ def get_bearer(s: requests.Session):
 def login(
     s: requests.Session, asvz_id: Union[str, int], asvz_password: str
 ) -> requests.Response:
+    """
+    Send a login request to the ASVZ server.
+
+    This method is required to be called before sending
+    any enrollment requests because it populates the session
+    cookies.
+
+    Parameters
+    ----------
+    s : requests.Session
+        Session object in which the cookies get stored.
+    asvz_id : Union[str, int]
+        Users ASVZ id, can be found in their asvz details page.
+    asvz_password : str
+        Users ASVZ password, used to login.
+
+    Returns
+    -------
+    requests.Response
+        Response object, returned from the login request.
+        Only really useful for querying status code.
+    """
     url = "https://auth.asvz.ch/Account/Login"
     payload = {
         "AsvzId": asvz_id,
@@ -83,6 +124,34 @@ def login(
 
 
 def request_enroll(s: requests.Session, referer_url: str) -> requests.Response:
+    """
+    Send an enrollment request to the ASVZ server.
+
+    Sends a post request to enroll a user for the sport
+    found at the referer_url url.
+    NOTE: The user must first have sent a login request
+    so that the authentication cookies get generated in
+    the session object.
+
+    Parameters
+    ----------
+    s : requests.Session
+        Requests session used to login, therefore containing
+        the correct authentication cookies.
+    referer_url : str
+        The url of the ASVZ web page for the lesson a user
+        wishes to enroll for.
+        NOTE: Each sport has a separate page for each different
+        time the sport takes place, E.g Jiu Jitsu has a separate
+        web page for the Monday 12AM session.
+
+    Returns
+    -------
+    requests.Response
+        The Requests response object.
+        Only returned so that we can query the status
+        of the request.
+    """
     lesson_id = referer_url.split("/")[-1]
     enrollment_url = (
         f"https://schalter.asvz.ch/tn-api/api/Lessons/{lesson_id}/Enrollment"
@@ -110,9 +179,43 @@ def request_enroll(s: requests.Session, referer_url: str) -> requests.Response:
     return s.post(enrollment_url, json=payload, headers=headers, params=querystring)
 
 
+def enroll(
+    lesson_url: str,
+    enrollment_time: Union[str, int],
+    lesson_name: Optional[str] = ""
+) -> None:
+    """
+    Enroll a user for a specific lesson at a specific time.
 
+    Wrapper function that combines all of the other methods
+    in this module to enroll a user for a specific lesson
+    with webpage lesson_url at enrollment_time.
+    Sleeps in a loop until the enrollment time is close,
+    then decreases the length of sleep accordingly.
+    Also prints out timing information.
+    Once the current time hits enrollment_time, logs in
+    and sends an enrollment request to enroll the user.
 
-def enroll(lesson_url: str, enrollment_time: Union[str, int], lesson_name: str = ""):
+    Parameters
+    ----------
+    lesson_url : str
+        The url of the ASVZ web page for the lesson a user
+        wishes to enroll for.
+        NOTE: Each sport has a separate page for each different
+        time the sport takes place, E.g Jiu Jitsu has a separate
+        web page for the Monday 12AM session.
+    enrollment_time : Union[str, int]
+        The time that the enrollment period begins.
+        This can either be in int unix timestamp format
+        or as a human readable str, in the format:
+
+            '%Y-%m-%dT%H:%M:%S.%f'
+
+    lesson_name : Optional[str]
+        String name of the lesson to enroll for.
+        This argument is only used for printing,
+        so is optional.
+    """
     if isinstance(enrollment_time, str):
         enrollment_time = datetime.datetime.strptime(
             enrollment_time, "%Y-%m-%dT%H:%M:%S.%f"
@@ -161,7 +264,7 @@ def enroll(lesson_url: str, enrollment_time: Union[str, int], lesson_name: str =
 
 def main():
     lesson_url = "https://schalter.asvz.ch/tn/lessons/367674"
-    enrollment_time = "2022-11-29T19:00:00.013"
+    enrollment_time = "2023-12-30T19:00:00.013"
     enroll(lesson_url=lesson_url, enrollment_time=enrollment_time)
     # with requests.Session() as session:
     #     r = login(session, asvz_id, asvz_password)
